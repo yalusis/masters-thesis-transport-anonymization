@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Transport Statistics </title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Manrope:wght@400;500;700;800&display=swap');
+
+:root {
+  --bg:       #07090f;
+  --s1:       #0d1018;
+  --s2:       #131720;
+  --border:   #1c2130;
+  --green:    #00d68f;
+  --blue:     #3b82f6;
+  --orange:   #f97316;
+  --purple:   #a78bfa;
+  --red:      #f43f5e;
+  --text:     #e2e8f0;
+  --muted:    #4b5775;
+  --mono:     'IBM Plex Mono', monospace;
+  --sans:     'Manrope', sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh}
+
+header{
+  padding:16px 32px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  background:rgba(7,9,15,.9);backdrop-filter:blur(10px);
+  position:sticky;top:0;z-index:50;
+}
+.brand{display:flex;align-items:center;gap:10px}
+.brand-icon{
+  width:34px;height:34px;border-radius:8px;
+  background:linear-gradient(135deg,var(--green),var(--blue));
+  display:flex;align-items:center;justify-content:center;font-size:16px;
+}
+.brand-name{font-size:17px;font-weight:800;letter-spacing:-.3px}
+.brand-sub{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:1px}
+.tag{
+  font-family:var(--mono);font-size:10px;letter-spacing:.5px;
+  padding:4px 12px;border-radius:20px;
+  border:1px solid rgba(0,214,143,.2);
+  background:rgba(0,214,143,.06);color:var(--green);
+}
+
+.page{max-width:1240px;margin:0 auto;padding:28px 20px;display:flex;flex-direction:column;gap:20px}
+
+.sec-title{
+  font-size:10px;font-weight:700;letter-spacing:2.5px;
+  text-transform:uppercase;color:var(--muted);margin-bottom:16px;
+  display:flex;align-items:center;gap:8px;
+}
+.sec-title::before{content:'';width:3px;height:12px;background:var(--green);border-radius:2px}
+
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.card{
+  background:var(--s1);border:1px solid var(--border);border-radius:10px;
+  padding:18px 16px;transition:border-color .2s;
+}
+.card:hover{border-color:rgba(0,214,143,.25)}
+.card-val{
+  font-family:var(--mono);font-size:28px;font-weight:600;
+  color:var(--green);line-height:1;margin-bottom:6px;
+}
+.card-val.blue{color:var(--blue)}
+.card-val.orange{color:var(--orange)}
+.card-val.purple{color:var(--purple)}
+.card-label{font-size:11px;color:var(--muted);letter-spacing:.3px;font-weight:500}
+
+.charts{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.chart-box{
+  background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:20px;
+}
+.chart-box.wide{grid-column:span 2}
+.chart-title{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:16px}
+.chart-wrap{position:relative;height:190px}
+
+.eq-list{height:190px;overflow-y:auto;display:flex;flex-direction:column;gap:5px}
+.eq-list::-webkit-scrollbar{width:3px}
+.eq-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.eq-row{display:flex;align-items:center;gap:8px}
+.eq-num{font-family:var(--mono);font-size:9px;color:var(--muted);min-width:16px;text-align:right}
+.eq-track{flex:1;height:7px;background:var(--s2);border-radius:4px;overflow:hidden}
+.eq-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--blue),var(--green));transition:width .5s}
+.eq-count{font-family:var(--mono);font-size:9px;color:var(--green);min-width:36px}
+
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead th{
+  font-family:var(--mono);font-size:9px;letter-spacing:1px;
+  text-transform:uppercase;color:var(--muted);
+  padding:10px 12px;text-align:left;
+  border-bottom:1px solid var(--border);font-weight:600;
+}
+tbody tr{border-bottom:1px solid rgba(28,33,48,.6);transition:background .15s}
+tbody tr:hover{background:var(--s2)}
+tbody td{padding:10px 12px;font-family:var(--mono);font-size:11px;color:var(--text)}
+.pill{
+  display:inline-block;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:600;letter-spacing:.5px;
+}
+.pill.normal   {background:rgba(0,214,143,.12);color:var(--green)}
+.pill.drowsy   {background:rgba(251,191,36,.12);color:#fbbf24}
+.pill.aggressive{background:rgba(244,63,94,.12);color:var(--red)}
+.pill.motorway {background:rgba(59,130,246,.12);color:var(--blue)}
+.pill.secondary{background:rgba(167,139,250,.12);color:var(--purple)}
+
+#loader{
+  display:flex;align-items:center;justify-content:center;
+  height:60vh;flex-direction:column;gap:14px;
+}
+.spin{
+  width:36px;height:36px;border-radius:50%;
+  border:3px solid var(--border);border-top-color:var(--green);
+  animation:sp .7s linear infinite;
+}
+@keyframes sp{to{transform:rotate(360deg)}}
+.load-text{font-family:var(--mono);font-size:12px;color:var(--muted)}
+
+#err-box{
+  display:none;background:rgba(244,63,94,.07);
+  border:1px solid rgba(244,63,94,.2);border-radius:10px;
+  padding:20px;font-family:var(--mono);font-size:12px;color:var(--red);
+}
+
+footer{
+  text-align:center;padding:20px;
+  font-family:var(--mono);font-size:10px;color:var(--muted);
+  border-top:1px solid var(--border);
+}
+
+@media(max-width:900px){
+  .cards{grid-template-columns:repeat(2,1fr)}
+  .charts{grid-template-columns:1fr}
+  .chart-box.wide{grid-column:span 1}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="brand-icon">🔒</div>
+    <div>
+      <div class="brand-name">Transport Statistics</div>
+      <div class="brand-sub">Dataset · k-anonymity + l-diversity + OWL</div>
+    </div>
+  </div>
+  <div class="tag">РЕЗУЛЬТАТИ АНОНІМІЗАЦІЇ</div>
+</header>
+
+<div id="loader">
+  <div class="spin"></div>
+  <div class="load-text">Завантаження результатів...</div>
+</div>
+
+<div id="err-box"></div>
+
+<div class="page" id="main" style="display:none">
+
+  <div>
+    <div class="sec-title">Загальна статистика</div>
+    <div class="cards">
+      <div class="card">
+        <div class="card-val" id="c-orig">—</div>
+        <div class="card-label">Вхідних записів</div>
+      </div>
+      <div class="card">
+        <div class="card-val blue" id="c-anon">—</div>
+        <div class="card-label">Анонімізовано</div>
+      </div>
+      <div class="card">
+        <div class="card-val orange" id="c-supp">—</div>
+        <div class="card-label">Пригнічено (suppressed)</div>
+      </div>
+      <div class="card">
+        <div class="card-val purple" id="c-rate">—</div>
+        <div class="card-label">Рівень пригнічення</div>
+      </div>
+      <div class="card">
+        <div class="card-val" id="c-classes">—</div>
+        <div class="card-label">Класів еквівалентності</div>
+      </div>
+      <div class="card">
+        <div class="card-val blue" id="c-trips">—</div>
+        <div class="card-label">Поїздок завантажено</div>
+      </div>
+      <div class="card">
+        <div class="card-val orange" id="c-triples">—</div>
+        <div class="card-label">RDF триплетів в OWL</div>
+      </div>
+      <div class="card">
+        <div class="card-val purple" id="c-precision">—</div>
+        <div class="card-label">Geohash precision</div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="sec-title">Аналіз даних</div>
+    <div class="charts">
+      <div class="chart-box">
+        <div class="chart-title">Поведінка водіїв</div>
+        <div class="chart-wrap"><canvas id="cBehavior"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">Тип дороги</div>
+        <div class="chart-wrap"><canvas id="cRoad"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">Категорія швидкості</div>
+        <div class="chart-wrap"><canvas id="cSpeed"></canvas></div>
+      </div>
+      <div class="chart-box wide">
+        <div class="chart-title">Середня оцінка водіння по типу поведінки</div>
+        <div class="chart-wrap"><canvas id="cScores"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">Класи еквівалентності (топ-20)</div>
+        <div class="eq-list" id="eqBars"></div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="sec-title">Поїздки (анонімізовані)</div>
+    <div class="chart-box">
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Псевдонім водія</th>
+              <th>Поведінка</th>
+              <th>Дорога</th>
+              <th>Відстань (км)</th>
+              <th>Сер. швидкість</th>
+              <th>Макс. швидкість</th>
+              <th>Оцінка</th>
+            </tr>
+          </thead>
+          <tbody id="tripsBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+ Програмне забезпечення для анонімізації транспортних даних з використання онтологій · 2026
+</footer>
+
+<script>
+const GKM={1:'2500km',2:'630km',3:'78km',4:'20km',5:'2.4km',6:'610m',7:'76m',8:'19m'};
+const PALETTE=['#00d68f','#3b82f6','#f97316','#a78bfa','#f43f5e','#34d399','#60a5fa'];
+
+const CFG = {
+  plugins:{legend:{labels:{color:'#4b5775',font:{family:"'IBM Plex Mono'",size:10}}}},
+  scales:{
+    x:{ticks:{color:'#4b5775',font:{family:"'IBM Plex Mono'",size:10}},grid:{color:'#1c2130'}},
+    y:{ticks:{color:'#4b5775',font:{family:"'IBM Plex Mono'",size:10}},grid:{color:'#1c2130'}},
+  }
+};
+
+function fmt(n){
+  if(n==null||n===undefined)return'—';
+  if(typeof n==='number'&&n>=1000)return n.toLocaleString('uk-UA');
+  return n;
+}
+
+async function load(){
+  try{
+    const r=await fetch('/api/data');
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const d=await r.json();
+    document.getElementById('loader').style.display='none';
+    document.getElementById('main').style.display='flex';
+    render(d);
+  }catch(e){
+    document.getElementById('loader').style.display='none';
+    const eb=document.getElementById('err-box');
+    eb.style.display='block';
+    eb.textContent='Помилка завантаження: '+e.message+
+      '\n\nПереконайтесь що файли output/anonymized_data.csv та output/anonymization_report.json існують.';
+  }
+}
+
+function render(d){
+  const rep=d.report||{};
+
+  document.getElementById('c-orig').textContent     = fmt(rep.original_records);
+  document.getElementById('c-anon').textContent     = fmt(rep.anonymized_records);
+  document.getElementById('c-supp').textContent     = fmt(rep.suppressed_records);
+  document.getElementById('c-rate').textContent     = rep.suppression_rate!=null
+    ? (rep.suppression_rate*100).toFixed(1)+'%' : '—';
+  document.getElementById('c-classes').textContent  = fmt(rep.num_equivalence_classes);
+  document.getElementById('c-trips').textContent    = fmt(rep.trips_loaded);
+  document.getElementById('c-triples').textContent  = fmt(rep.ontology_triples);
+  const p=rep.applied_geohash_precision;
+  document.getElementById('c-precision').textContent= p ? `${p} (~${GKM[p]||''})` : '—';
+
+  if(d.behavior_dist) drawDoughnut('cBehavior', d.behavior_dist);
+
+  if(d.road_dist) drawDoughnut('cRoad', d.road_dist, ['#3b82f6','#a78bfa','#00d68f']);
+
+  if(d.speed_dist) drawDoughnut('cSpeed', d.speed_dist, ['#00d68f','#f97316','#f43f5e']);
+
+  if(d.avg_scores){
+    const labs=Object.keys(d.avg_scores);
+    const vals=Object.values(d.avg_scores);
+    new Chart(document.getElementById('cScores'),{
+      type:'bar',
+      data:{
+        labels:labs,
+        datasets:[{
+          data:vals,
+          backgroundColor:PALETTE,
+          borderRadius:6,borderSkipped:false,
+        }]
+      },
+      options:{
+        ...CFG,
+        plugins:{legend:{display:false},
+          tooltip:{callbacks:{label:c=>` Оцінка: ${c.raw}`}}
+        },
+        scales:{
+          x:{...CFG.scales.x},
+          y:{...CFG.scales.y,min:0,max:100,ticks:{...CFG.scales.y.ticks,callback:v=>v+' б'}},
+        }
+      }
+    });
+  }
+
+  if(d.eq_sizes&&d.eq_sizes.length){
+    const max=Math.max(...d.eq_sizes);
+    document.getElementById('eqBars').innerHTML=d.eq_sizes.map((s,i)=>
+      `<div class="eq-row">
+        <div class="eq-num">${i+1}</div>
+        <div class="eq-track"><div class="eq-fill" style="width:${(s/max*100).toFixed(1)}%"></div></div>
+        <div class="eq-count">${s}</div>
+      </div>`
+    ).join('');
+  }
+
+  if(d.trips&&d.trips.length){
+    const behaviorPill=b=>{
+      const cl=String(b).toLowerCase();
+      return`<span class="pill ${cl}">${b}</span>`;
+    };
+    const roadPill=r=>{
+      const cl=String(r).toLowerCase();
+      return`<span class="pill ${cl}">${r}</span>`;
+    };
+    document.getElementById('tripsBody').innerHTML=d.trips.map((t,i)=>`
+      <tr>
+        <td>${i+1}</td>
+        <td>${t.driver_pseudonym||'—'}</td>
+        <td>${behaviorPill(t.behavior||'—')}</td>
+        <td>${roadPill(t.road_type||'—')}</td>
+        <td>${t.distance_km!=null?Number(t.distance_km).toFixed(1):'—'}</td>
+        <td>${t.avg_speed_kmh!=null?Number(t.avg_speed_kmh).toFixed(1)+' км/г':'—'}</td>
+        <td>${t.max_speed_kmh!=null?Number(t.max_speed_kmh).toFixed(1)+' км/г':'—'}</td>
+        <td>${t.score_total_final!=null?Number(t.score_total_final).toFixed(1):'—'}</td>
+      </tr>
+    `).join('');
+  }
+}
+
+function drawDoughnut(id, dist, colors){
+  const labs=Object.keys(dist);
+  const vals=Object.values(dist);
+  new Chart(document.getElementById(id),{
+    type:'doughnut',
+    data:{
+      labels:labs,
+      datasets:[{data:vals,backgroundColor:colors||PALETTE,borderWidth:0,hoverOffset:5}]
+    },
+    options:{
+      cutout:'62%',
+      plugins:{legend:{position:'bottom',labels:{color:'#4b5775',font:{family:"'IBM Plex Mono'",size:10},padding:12}}}
+    }
+  });
+}
+
+load();
+</script>
+</body>
+</html>
