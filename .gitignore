@@ -1,6 +1,4 @@
 .idea/
 __pycache__/
 UAH-DRIVESET/
-UAH-DriveSet/
 output/
-*.pyc
